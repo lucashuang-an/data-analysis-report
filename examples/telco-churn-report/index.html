@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Churn Diagnostic — Contract, Lifecycle &amp; Revenue Exposure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<style>
+@font-face { font-family:'Inter'; src:local('Inter'), url('https://rsms.me/inter/font-files/Inter-Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Inter'; src:local('Inter Medium'), url('https://rsms.me/inter/font-files/Inter-Medium.woff2') format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Inter'; src:local('Inter SemiBold'), url('https://rsms.me/inter/font-files/Inter-SemiBold.woff2') format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'Inter'; src:local('Inter Bold'), url('https://rsms.me/inter/font-files/Inter-Bold.woff2') format('woff2'); font-weight:700; font-display:swap; }
+@font-face { font-family:'JetBrains Mono'; src:local('JetBrains Mono Medium'), url('https://cdn.jsdelivr.net/fontsource/jetbrains-mono/jetbrains-mono-latin-700-normal.woff2') format('woff2'); font-weight:700; font-display:swap; }
+@font-face { font-family:'JetBrains Mono'; src:local('JetBrains Mono ExtraBold'), url('https://cdn.jsdelivr.net/fontsource/jetbrains-mono/jetbrains-mono-latin-800-normal.woff2') format('woff2'); font-weight:800; font-display:swap; }
+
+:root{
+  --harmony-paper:#FFFCF0; --harmony-base:#F2F0E5; --harmony-crust:#E6E4D9; --harmony-surface:#DAD8CE;
+  --harmony-tx:#100F0F; --harmony-tx-2:#575653; --harmony-tx-3:#8C8A84; --harmony-dark:#1A1D20;
+  --harmony-primary:#205EA6; --harmony-indigo:#3B5284; --harmony-teal:#24837B; --harmony-slate:#52606D; --harmony-clay:#B85B35;
+  --harmony-primary-soft:#E4ECF5; --harmony-teal-soft:#E0EEED; --harmony-clay-soft:#F4E3D9; --harmony-slate-soft:#E5E8EB; --harmony-indigo-soft:#E2E5ED;
+  --shadow-sm:0 1px 2px rgba(16,15,15,.04),0 1px 4px rgba(16,15,15,.04);
+  --shadow:0 1px 2px rgba(16,15,15,.06),0 1px 3px rgba(16,15,15,.04);
+  --shadow-md:0 4px 14px rgba(16,15,15,.06),0 1px 4px rgba(16,15,15,.04);
+  --space-1:8px; --space-2:16px; --space-3:24px; --space-4:32px; --space-5:40px; --space-6:48px;
+  --radius-sm:8px; --radius:12px; --radius-lg:18px;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; font-family:'Inter','Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background-color:var(--harmony-paper);
+  background-image:radial-gradient(at 0% 0%, rgba(32,94,166,.04) 0%, transparent 50%), radial-gradient(at 100% 0%, rgba(184,91,53,.03) 0%, transparent 50%);
+  background-attachment:fixed; color:var(--harmony-tx); line-height:1.5;
+}
+.mono,.num,.kpi-value{font-family:'JetBrains Mono','Roboto Mono',monospace;}
+.wrap{max-width:1120px; margin:0 auto; padding:var(--space-4) var(--space-3) var(--space-6);}
+h1,h2,h3{margin:0; letter-spacing:-0.01em;}
+h2{font-size:20px; font-weight:600; line-height:28px; color:var(--harmony-tx); margin:var(--space-5) 0 var(--space-2);}
+h3{font-size:16px; font-weight:500; line-height:24px; color:var(--harmony-tx);}
+p{margin:0 0 8px; font-size:14px; line-height:20px; color:var(--harmony-tx-2);}
+.caption{font-size:12px; line-height:16px; color:var(--harmony-tx-3);}
+
+/* Header */
+.header{
+  position:relative; overflow:hidden; border-radius:var(--radius-lg); box-shadow:var(--shadow-md);
+  background:linear-gradient(135deg, var(--harmony-dark) 0%, #232728 50%, var(--harmony-tx) 100%);
+  padding:var(--space-5) var(--space-4); color:#fff;
+}
+.header::before{content:'';position:absolute;top:-40px;right:-40px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle, rgba(184,91,53,.20) 0%, transparent 70%);}
+.header::after{content:'';position:absolute;bottom:-60px;left:-40px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle, rgba(32,94,166,.18) 0%, transparent 70%);}
+.header-inner{position:relative; z-index:1;}
+.eyebrow{color:var(--harmony-teal); font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px;}
+.header h1{font-size:28px; font-weight:700; line-height:36px; color:#fff; max-width:760px;}
+.header .sub{color:rgba(255,255,255,.72); font-size:14px; margin-top:10px; max-width:680px;}
+.chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:20px;}
+.chip{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); backdrop-filter:blur(8px); border-radius:999px; padding:6px 14px; font-size:12px; color:rgba(255,255,255,.85);}
+.chip b{color:#5BB0A6; font-family:'JetBrains Mono',monospace;}
+
+/* Core conclusions */
+.callout{background:#fff; border:1px solid var(--harmony-crust); border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--space-3) var(--space-3) var(--space-2); margin-top:var(--space-3);}
+.callout-headline{font-size:17px; font-weight:600; color:var(--harmony-tx); line-height:26px; margin-bottom:var(--space-2); padding-bottom:var(--space-2); border-bottom:1px solid var(--harmony-crust);}
+.conclusion{position:relative; padding:12px 0 12px 16px; border-left:4px solid transparent; border-image:linear-gradient(180deg, var(--harmony-primary), var(--harmony-indigo)) 1; margin-bottom:4px;}
+.conclusion:last-child{margin-bottom:0;}
+.conclusion-top{display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;}
+.conclusion-num{font-family:'JetBrains Mono',monospace; font-weight:800; color:var(--harmony-primary); font-size:13px;}
+.badge{display:inline-block; font-size:11px; font-weight:600; padding:2px 9px; border-radius:999px; white-space:nowrap;}
+.badge-reliable{background:var(--harmony-primary-soft); color:var(--harmony-primary); border:1px solid rgba(32,94,166,.2);}
+.badge-directional{background:var(--harmony-slate-soft); color:var(--harmony-slate); border:1px solid rgba(82,96,109,.2);}
+.badge-hypothesis{background:var(--harmony-clay-soft); color:var(--harmony-clay); border:1px solid rgba(184,91,53,.2);}
+.conclusion-text{font-size:14px; color:var(--harmony-tx); line-height:21px;}
+.conclusion-text b{font-family:'JetBrains Mono',monospace; font-weight:700;}
+.conclusion-action{font-size:13px; color:var(--harmony-tx-2); margin-top:4px;}
+.conclusion-action b{color:var(--harmony-tx);}
+
+/* Data notes */
+details.notes{background:var(--harmony-base); border:1px solid var(--harmony-crust); border-radius:var(--radius); margin-top:var(--space-3); padding:14px 18px;}
+details.notes summary{cursor:pointer; font-size:13px; font-weight:600; color:var(--harmony-tx-2); list-style:none;}
+details.notes summary::-webkit-details-marker{display:none;}
+details.notes summary::before{content:'▸ '; color:var(--harmony-tx-3);}
+details.notes[open] summary::before{content:'▾ ';}
+details.notes ul{margin:10px 0 0; padding-left:18px;}
+details.notes li{font-size:13px; color:var(--harmony-tx-2); line-height:20px; margin-bottom:6px;}
+
+/* KPI cards */
+.kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-2); margin-top:var(--space-2);}
+.kpi-card{position:relative; background:#fff; border:1px solid var(--harmony-crust); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--harmony-primary),var(--harmony-indigo));}
+.kpi-label{font-size:12px; color:var(--harmony-tx-2); margin-bottom:6px;}
+.kpi-value{font-size:28px; font-weight:800; color:var(--harmony-primary); letter-spacing:-0.01em; line-height:1.1;}
+.kpi-value small{font-size:15px; font-weight:600;}
+.kpi-note{font-size:11px; color:var(--harmony-tx-3); margin-top:6px;}
+.trend-badge{display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px; margin-top:8px;}
+.trend-up{color:var(--harmony-clay); background:var(--harmony-clay-soft); border:1px solid rgba(184,91,53,.2);}
+.trend-flat{color:var(--harmony-slate); background:var(--harmony-slate-soft); border:1px solid rgba(82,96,109,.2);}
+
+/* Cards / panels */
+.card{background:var(--harmony-base); border:1px solid var(--harmony-crust); border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--space-3); margin-top:var(--space-2); transition:box-shadow .15s, transform .15s;}
+.card:hover{box-shadow:var(--shadow-md); transform:translateY(-2px);}
+.chart-cap{font-size:12px; color:var(--harmony-tx-3); margin-top:10px;}
+
+/* Tables */
+table{width:100%; border-collapse:collapse; font-size:12.5px;}
+th{text-align:left; font-weight:600; color:var(--harmony-tx-2); font-size:11px; text-transform:uppercase; letter-spacing:.03em; padding:9px 10px; border-bottom:2px solid var(--harmony-crust);}
+td{padding:9px 10px; border-bottom:1px solid var(--harmony-crust); color:var(--harmony-tx); font-family:'JetBrains Mono',monospace; font-size:12.5px;}
+td.label{font-family:'Inter',sans-serif; color:var(--harmony-tx); font-weight:500;}
+tr:last-child td{border-bottom:none;}
+.table-wrap{overflow-x:auto; margin-top:14px;}
+.sig-badge{font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-block;}
+.sig-3{background:var(--harmony-clay-soft); color:var(--harmony-clay); border:1px solid rgba(184,91,53,.2);}
+.sig-2{background:var(--harmony-indigo-soft); color:var(--harmony-indigo); border:1px solid rgba(59,82,132,.2);}
+.sig-1{background:var(--harmony-teal-soft); color:var(--harmony-teal); border:1px solid rgba(36,131,123,.2);}
+.sig-ns{background:var(--harmony-base); color:var(--harmony-tx-3);}
+.sig-base{background:var(--harmony-primary-soft); color:var(--harmony-primary); border:1px solid rgba(32,94,166,.2);}
+
+/* Dual panel */
+.dual-col{background:#fff; border:1px solid var(--harmony-crust); border-radius:var(--radius); padding:var(--space-3); margin-top:var(--space-2); box-shadow:var(--shadow);}
+.dual-title{font-size:14px; font-weight:600; color:var(--harmony-tx); margin-bottom:4px;}
+.dual-panel-label{font-size:11px; color:var(--harmony-tx-3); margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em;}
+.panel-divider{border:none; border-top:1px dashed var(--harmony-crust); margin:6px 0 14px;}
+
+.note-warn{background:var(--harmony-clay-soft); color:var(--harmony-clay); border-left:3px solid var(--harmony-clay); padding:10px 14px; border-radius:6px; font-size:13px; margin-top:14px;}
+.note-info{background:var(--harmony-primary-soft); color:var(--harmony-indigo); border-left:3px solid var(--harmony-primary); padding:10px 14px; border-radius:6px; font-size:13px; margin-top:14px;}
+
+.grid2{display:grid; grid-template-columns:1.1fr .9fr; gap:var(--space-2);}
+.footer{margin-top:var(--space-5); padding-top:var(--space-3); border-top:1px solid var(--harmony-crust); font-size:11px; color:var(--harmony-tx-3); text-align:center;}
+.footer a{color:var(--harmony-tx-2);}
+
+@media (max-width:860px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .grid2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  
+<div class="header">
+  <div class="header-inner">
+    <div class="eyebrow">Customer Retention Analytics &middot; Skill Demo Report</div>
+    <h1>Customer Churn Diagnostic: Contract Structure, Lifecycle &amp; Revenue Exposure</h1>
+    <p class="sub">Generated end-to-end by the <strong style="color:#5BB0A6;">data-analysis-report</strong> Claude Skill on a public business dataset &mdash; from raw CSV to data-quality audit, statistical testing, and chart-backed findings.</p>
+    <div class="chip-row">
+      <div class="chip">n = <b>7,043</b> customers</div>
+      <div class="chip">Cross-sectional snapshot &middot; no calendar date field</div>
+      <div class="chip">Source: <b>IBM Telco Customer Churn</b> (public sample dataset)</div>
+    </div>
+  </div>
+</div>
+
+  
+<div class="callout">
+  <div class="callout-headline">Contract term is the single biggest lever on churn &mdash; and roughly a third of monthly recurring revenue is currently exposed to it, concentrated almost entirely in the month-to-month base.</div>
+
+  <div class="conclusion">
+    <div class="conclusion-top"><span class="conclusion-num">01</span><span class="badge badge-reliable">Reliable</span></div>
+    <div class="conclusion-text">Month-to-month customers churn at <b>42.7%</b> vs <b>2.8%</b> for two-year contracts &mdash; a <b>39.9pp</b> gap (z=29.7, p&lt;0.001). One-year contracts sit in between at 11.3%.</div>
+    <div class="conclusion-action">Action: prioritize term-upgrade offers for the <b>3,875</b> month-to-month customers &mdash; by far the highest-risk segment.</div>
+  </div>
+
+  <div class="conclusion">
+    <div class="conclusion-top"><span class="conclusion-num">02</span><span class="badge badge-reliable">Reliable</span></div>
+    <div class="conclusion-text">The drop in churn over tenure (<b>47.4%</b> in months 0&ndash;12 to <b>6.6%</b> in months 61&ndash;72) is largely a <b>structural</b> effect: the contract mix shifts in parallel, from 91.2% month-to-month at 0&ndash;12 months to 70.1% two-year at 61&ndash;72 months.</div>
+    <div class="conclusion-action">Because contract type alone separates churn by up to 39.9pp, a meaningful share of the "tenure effect" is survivorship into longer-term contracts, not loyalty deepening per customer &mdash; avoid reading the trend line alone as a behavioral maturity curve.</div>
+  </div>
+
+  <div class="conclusion">
+    <div class="conclusion-top"><span class="conclusion-num">03</span><span class="badge badge-directional">Directional</span></div>
+    <div class="conclusion-text">Protective add-ons track with materially lower churn: no Online Security is <b>31.3%</b> vs <b>14.6%</b> with it (16.7pp gap); Tech Support shows a similar 16.0pp gap (both p&lt;0.001 after BH correction across 7 comparisons).</div>
+    <div class="conclusion-action">This is a cross-sectional association, not a randomized test &mdash; the add-ons may proxy for a more engaged customer rather than causing retention. Validate with a small controlled offer test before bundling broadly.</div>
+  </div>
+
+  <div class="conclusion">
+    <div class="conclusion-top"><span class="conclusion-num">04</span><span class="badge badge-reliable">Reliable (about the confound)</span></div>
+    <div class="conclusion-text">Streaming TV/Movies and Paperless Billing show a <b>reversed</b> pattern &mdash; higher adoption, higher churn &mdash; purely because of confounding: streaming subscribers are 64.6% on Fiber optic vs 47.9% for non-subscribers, and Fiber optic itself churns at 41.9% vs 19.0% for DSL.</div>
+    <div class="conclusion-action">Do not target "streaming users" or "paperless-billing users" for retention outreach based on this alone &mdash; any rule built on these fields without controlling for contract/internet type will misattribute the effect.</div>
+  </div>
+
+  <div class="conclusion">
+    <div class="conclusion-top"><span class="conclusion-num">05</span><span class="badge badge-directional">Directional (scenario estimate)</span></div>
+    <div class="conclusion-text">Churned customers represent <b>$139.1K</b>/month in recurring revenue (30.5% of MRR), and <b>86.9%</b> of that loss comes from month-to-month accounts alone.</div>
+    <div class="conclusion-action">If month-to-month churn matched the one-year contract's 11.3% rate, the data implies roughly <b>1,218</b> fewer monthly cancellations and about <b>$80.9K</b> in protected monthly revenue &mdash; an illustrative upper bound, not a guarantee, since contract type is only one of several churn drivers.</div>
+  </div>
+</div>
+
+  
+<details class="notes">
+  <summary>Data notes &amp; methodology (click to expand)</summary>
+  <ul>
+    <li><strong>Definition:</strong> Churn = customer's "Churn" field is "Yes" as of the dataset snapshot. Overall churn rate = churned customers / total customers.</li>
+    <li><strong>Shape:</strong> 7,043 rows &times; 21 columns. No duplicate rows and no duplicate <span class="mono">customerID</span> values found.</li>
+    <li><strong>Cleaning decision:</strong> 11 records (0.16%) had a blank <span class="mono">TotalCharges</span> value; all correspond to brand-new accounts with <span class="mono">tenure = 0</span> that had not yet been billed. These were set to <span class="mono">TotalCharges = MonthlyCharges</span> (their first partial bill) rather than dropped.</li>
+    <li><strong>Limitation:</strong> this is a single cross-sectional snapshot with no calendar date field. "Tenure" lets us reconstruct a lifecycle view by grouping customers by how long they've been on the books, but it is not a true longitudinal cohort trend &mdash; each tenure bucket is a different, non-overlapping group of customers.</li>
+    <li><strong>Limitation:</strong> the dataset has no churn-reason, competitor-switch, or price-change field, so findings here describe statistical association between account attributes and churn status, not verified causal mechanisms.</li>
+    <li><strong>Source &amp; license:</strong> IBM Telco Customer Churn &mdash; a publicly released sample dataset widely used for churn-analytics tutorials and education. This report is a demonstration of the analytical process, not an operational business report.</li>
+  </ul>
+</details>
+
+  
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Customers</div>
+    <div class="kpi-value">7,043</div>
+    <div class="kpi-note">Single snapshot, all active + churned accounts</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Overall Churn Rate</div>
+    <div class="kpi-value">26.5<small>%</small></div>
+    <span class="trend-badge trend-up">Concentrated in month-to-month</span>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Average Tenure</div>
+    <div class="kpi-value">32.4<small> mo</small></div>
+    <div class="kpi-note">Across all customers, churned + retained</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Revenue at Risk</div>
+    <div class="kpi-value">$139.1<small>K/mo</small></div>
+    <span class="trend-badge trend-up">30.5% of total MRR</span>
+  </div>
+</div>
+
+  
+<h2>1. Contract Term Is the Dominant Churn Lever</h2>
+<div class="card">
+  <h3>Churn rate by contract type (95% Wilson CI, baseline = Two year)</h3>
+  <div style="position:relative;height:280px;margin-top:10px;"><canvas id="chart-contract"></canvas></div>
+  <p class="chart-cap">Two-prop Z-test vs. the two-year baseline for each contract type; error bars show the 95% Wilson confidence interval.</p>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Contract</th><th>n</th><th>Churn rate</th><th>95% CI</th><th>vs baseline</th><th>Relative lift</th><th>p-value</th><th>Sig.</th></tr></thead>
+      <tbody><tr>
+      <td class="label">Month-to-month</td>
+      <td>3,875</td>
+      <td>42.7%</td>
+      <td>[41.2, 44.3]</td>
+      <td>+39.9pp</td>
+      <td>+1,408.2%</td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr><tr>
+      <td class="label">One year</td>
+      <td>1,473</td>
+      <td>11.3%</td>
+      <td>[9.8, 13.0]</td>
+      <td>+8.4pp</td>
+      <td>+298.0%</td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr><tr>
+      <td class="label">Two year</td>
+      <td>1,695</td>
+      <td>2.8%</td>
+      <td>[2.1, 3.7]</td>
+      <td>&mdash;</td>
+      <td>&mdash;</td>
+      <td>&mdash;</td>
+      <td><span class="sig-badge sig-base">base</span></td>
+    </tr></tbody>
+    </table>
+  </div>
+</div>
+
+  
+<h2>2. Churn Risk Across the Customer Lifecycle</h2>
+<div class="dual-col">
+  <div class="dual-title">Efficiency vs. structure by tenure bucket</div>
+  <div class="dual-panel-label">Churn rate, %</div>
+  <div style="position:relative;height:210px"><canvas id="chart-tenure-rate"></canvas></div>
+  <hr class="panel-divider">
+  <div class="dual-panel-label">Contract mix, % of customers in bucket</div>
+  <div style="position:relative;height:230px"><canvas id="chart-tenure-struct"></canvas></div>
+  <p class="chart-cap">Each tenure bucket is a distinct group of customers (cross-sectional, not a tracked cohort). The top panel shows churn rate; the bottom panel shows what share of each bucket is on each contract type.</p>
+  <div class="note-info">📊 <strong>Structural read:</strong> churn falls from 47.4% to 6.6% across the lifecycle, but the month-to-month share falls from 91.2% to 7.7% over the same buckets while the two-year share rises from 3.1% to 70.1%. The two panels move together, consistent with a structural (contract-mix) effect rather than a purely behavioral one &mdash; a classic setup for Simpson's-paradox-style misreading if the top panel is viewed alone.</div>
+</div>
+
+  
+<h2>3. Which Service Attributes Move the Needle?</h2>
+<div class="card">
+  <h3>Churn rate: without vs. with each service attribute</h3>
+  <div style="position:relative;height:320px;margin-top:10px;"><canvas id="chart-drivers"></canvas></div>
+  <p class="chart-cap">Sorted by absolute effect size. Streaming and Paperless Billing reverse direction &mdash; see the confounder note below before acting on them.</p>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Attribute</th><th>n (without)</th><th>Churn (without)</th><th>n (with)</th><th>Churn (with)</th><th>Difference</th><th>p-value (BH-adj.)</th><th>Sig.</th></tr></thead>
+      <tbody><tr>
+      <td class="label">PaperlessBilling</td>
+      <td>2,872</td>
+      <td>16.3%</td>
+      <td>4,171</td>
+      <td>33.6%</td>
+      <td style="color:var(--harmony-clay);font-weight:700;">17.2pp <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:10.5px;">(&#9650; higher churn)</span></td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr><tr>
+      <td class="label">OnlineSecurity</td>
+      <td>5,024</td>
+      <td>31.3%</td>
+      <td>2,019</td>
+      <td>14.6%</td>
+      <td style="color:var(--harmony-teal);font-weight:700;">16.7pp <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:10.5px;">(&#9660; lower churn)</span></td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr><tr>
+      <td class="label">TechSupport</td>
+      <td>4,999</td>
+      <td>31.2%</td>
+      <td>2,044</td>
+      <td>15.2%</td>
+      <td style="color:var(--harmony-teal);font-weight:700;">16.0pp <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:10.5px;">(&#9660; lower churn)</span></td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr><tr>
+      <td class="label">OnlineBackup</td>
+      <td>4,614</td>
+      <td>29.2%</td>
+      <td>2,429</td>
+      <td>21.5%</td>
+      <td style="color:var(--harmony-teal);font-weight:700;">7.6pp <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:10.5px;">(&#9660; lower churn)</span></td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr><tr>
+      <td class="label">DeviceProtection</td>
+      <td>4,621</td>
+      <td>28.7%</td>
+      <td>2,422</td>
+      <td>22.5%</td>
+      <td style="color:var(--harmony-teal);font-weight:700;">6.2pp <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:10.5px;">(&#9660; lower churn)</span></td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr><tr>
+      <td class="label">StreamingTV</td>
+      <td>4,336</td>
+      <td>24.3%</td>
+      <td>2,707</td>
+      <td>30.1%</td>
+      <td style="color:var(--harmony-clay);font-weight:700;">5.7pp <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:10.5px;">(&#9650; higher churn)</span></td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr><tr>
+      <td class="label">StreamingMovies</td>
+      <td>4,311</td>
+      <td>24.4%</td>
+      <td>2,732</td>
+      <td>29.9%</td>
+      <td style="color:var(--harmony-clay);font-weight:700;">5.6pp <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:10.5px;">(&#9650; higher churn)</span></td>
+      <td>&lt;0.001</td>
+      <td><span class="sig-badge sig-3">***</span></td>
+    </tr></tbody>
+    </table>
+  </div>
+  <p class="caption" style="margin-top:10px;">p-values are Benjamini&ndash;Hochberg adjusted for 7 simultaneous comparisons.</p>
+  <div class="note-warn">⚠ <strong>Confounding warning:</strong> Streaming TV/Movies subscribers are 64.6% on Fiber optic internet vs 47.9% for non-subscribers &mdash; and Fiber optic churns at 41.9% vs 19.0% for DSL on its own. Paperless Billing customers are 62.0% month-to-month vs 44.9% for non-Paperless. These two rows reflect contract/internet mix, not a causal effect of the feature itself.</div>
+</div>
+
+  
+<h2>4. Payment Method Segmentation</h2>
+<div class="card">
+  <h3>Churn rate by payment method (95% Wilson CI)</h3>
+  <div style="position:relative;height:280px;margin-top:10px;"><canvas id="chart-payment"></canvas></div>
+  <p class="chart-cap">Electronic check payers churn at roughly 3x the rate of the three automatic/paper alternatives &mdash; likely correlated with the same month-to-month, lower-commitment segment seen in Section 1.</p>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Payment method</th><th>n</th><th>Churn rate</th><th>95% CI</th></tr></thead>
+      <tbody><tr>
+      <td class="label">Electronic check</td>
+      <td>2,365</td>
+      <td>45.3%</td>
+      <td>[43.3, 47.3]</td>
+    </tr><tr>
+      <td class="label">Mailed check</td>
+      <td>1,612</td>
+      <td>19.1%</td>
+      <td>[17.3, 21.1]</td>
+    </tr><tr>
+      <td class="label">Bank transfer (automatic)</td>
+      <td>1,544</td>
+      <td>16.7%</td>
+      <td>[14.9, 18.6]</td>
+    </tr><tr>
+      <td class="label">Credit card (automatic)</td>
+      <td>1,522</td>
+      <td>15.2%</td>
+      <td>[13.5, 17.1]</td>
+    </tr></tbody>
+    </table>
+  </div>
+</div>
+
+  
+<div class="footer">
+  Generated with the <strong>data-analysis-report</strong> Claude Skill &middot; Dataset: IBM Telco Customer Churn (public sample data) &middot;
+  This is a demonstration report built to showcase the skill's analytical pipeline &mdash; not an operational business report.
+</div>
+
+</div>
+<script>
+const DATA = {"kpi": {"total_customers": 7043, "churn_rate": 26.5, "avg_tenure": 32.4, "revenue_at_risk": 139131.0, "revenue_at_risk_pct": 30.5, "total_monthly_revenue": 456117.0}, "contract": [{"group": "Month-to-month", "n": 3875, "x": 1655, "rate": 42.7, "ci_lo": 41.16, "ci_hi": 44.27, "diff_pp": 39.88, "lift": 1408.2, "z": 29.722, "p": 0.0, "sig": "***"}, {"group": "One year", "n": 1473, "x": 166, "rate": 11.3, "ci_lo": 9.75, "ci_hi": 12.99, "diff_pp": 8.44, "lift": 298.0, "z": 9.438, "p": 0.0, "sig": "***"}, {"group": "Two year", "n": 1695, "x": 48, "rate": 2.8, "ci_lo": 2.14, "ci_hi": 3.73, "diff_pp": 0.0, "lift": 0.0, "z": 0, "p": 1.0, "sig": "base"}], "tenure": {"labels": ["0-12", "13-24", "25-36", "37-48", "49-60", "61-72"], "n": [2186, 1024, 832, 762, 832, 1407], "churn_rate": [47.4, 28.7, 21.6, 19.0, 14.4, 6.6], "structure": {"Month-to-month": [91.2, 72.0, 58.4, 41.5, 28.1, 7.7], "One year": [5.7, 19.2, 30.0, 35.2, 38.6, 22.2], "Two year": [3.1, 8.8, 11.5, 23.4, 33.3, 70.1]}}, "drivers": [{"feature": "PaperlessBilling", "n_without": 2872, "rate_without": 16.3, "n_with": 4171, "rate_with": 33.6, "diff_pp": -17.24, "z": -16.098, "p": 0.0, "p_adj": 0.0, "sig_adj": "***"}, {"feature": "OnlineSecurity", "n_without": 5024, "rate_without": 31.3, "n_with": 2019, "rate_with": 14.6, "diff_pp": 16.72, "z": 14.37, "p": 0.0, "p_adj": 0.0, "sig_adj": "***"}, {"feature": "TechSupport", "n_without": 4999, "rate_without": 31.2, "n_with": 2044, "rate_with": 15.2, "diff_pp": 16.02, "z": 13.82, "p": 0.0, "p_adj": 0.0, "sig_adj": "***"}, {"feature": "OnlineBackup", "n_without": 4614, "rate_without": 29.2, "n_with": 2429, "rate_with": 21.5, "diff_pp": 7.64, "z": 6.903, "p": 0.0, "p_adj": 0.0, "sig_adj": "***"}, {"feature": "DeviceProtection", "n_without": 4621, "rate_without": 28.7, "n_with": 2422, "rate_with": 22.5, "diff_pp": 6.15, "z": 5.552, "p": 0.0, "p_adj": 0.0, "sig_adj": "***"}, {"feature": "StreamingTV", "n_without": 4336, "rate_without": 24.3, "n_with": 2707, "rate_with": 30.1, "diff_pp": -5.74, "z": -5.306, "p": 0.0, "p_adj": 0.0, "sig_adj": "***"}, {"feature": "StreamingMovies", "n_without": 4311, "rate_without": 24.4, "n_with": 2732, "rate_with": 29.9, "diff_pp": -5.56, "z": -5.151, "p": 0.0, "p_adj": 0.0, "sig_adj": "***"}], "confounders": {"paperless_yes_mtm_pct": 62.0, "paperless_no_mtm_pct": 44.9, "streaming_yes_fiber_pct": 64.6, "streaming_no_fiber_pct": 47.9, "fiber_churn_rate": 41.9, "dsl_churn_rate": 19.0}, "payment": [{"group": "Electronic check", "n": 2365, "rate": 45.3, "ci_lo": 43.29, "ci_hi": 47.3}, {"group": "Mailed check", "n": 1612, "rate": 19.1, "ci_lo": 17.26, "ci_hi": 21.1}, {"group": "Bank transfer (automatic)", "n": 1544, "rate": 16.7, "ci_lo": 14.93, "ci_hi": 18.65}, {"group": "Credit card (automatic)", "n": 1522, "rate": 15.2, "ci_lo": 13.52, "ci_hi": 17.14}], "revenue_scenario": {"mtm_customers": 3875, "mtm_churn_rev_lost": 120847.0, "mtm_share_of_total_churn_rev": 86.9, "avoided_customers": 1218.0, "avoided_monthly_revenue": 80894.0}, "data_notes": {"n_rows": 7043, "n_cols": 21, "duplicate_rows": 0, "duplicate_customer_ids": 0, "blank_total_charges": 11, "blank_total_charges_pct": 0.16}};
+
+const topLabelPlugin = {
+  id: 'topLabel',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, di) => {
+      if (!ds._showLabel) return;
+      chart.getDatasetMeta(di).data.forEach((el, i) => {
+        const v = ds.data[i];
+        if (v === null || v === undefined) return;
+        ctx.save();
+        ctx.fillStyle = ds._labelColor || '#575653';
+        ctx.font = `${ds._labelBold ? '700 ' : '500 '}11px 'JetBrains Mono','Roboto Mono',monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(v + '%', el.x, el.y - 9);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+const errBarPlugin = {
+  id: 'errBar',
+  afterDatasetsDraw(chart, _, opts) {
+    if (!opts || !opts.lo) return;
+    const { ctx, scales: { x, y } } = chart;
+    chart.getDatasetMeta(0).data.forEach((bar, i) => {
+      const yLo = y.getPixelForValue(opts.lo[i]);
+      const yHi = y.getPixelForValue(opts.hi[i]);
+      ctx.save();
+      ctx.strokeStyle = '#575653';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(bar.x, yLo); ctx.lineTo(bar.x, yHi); ctx.stroke();
+      [yLo, yHi].forEach(yp => {
+        ctx.beginPath(); ctx.moveTo(bar.x - 5, yp); ctx.lineTo(bar.x + 5, yp); ctx.stroke();
+      });
+      ctx.restore();
+    });
+  }
+};
+
+const structLabelPlugin = {
+  id: 'structLabel',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, di) => {
+      chart.getDatasetMeta(di).data.forEach((el, i) => {
+        if (!ds.data[i] || ds.data[i] < 9) return;
+        const { x, y, height } = el.getProps(['x', 'y', 'width', 'height'], true);
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,252,240,0.92)';
+        ctx.font = `700 10px 'JetBrains Mono','Roboto Mono',monospace`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(ds.data[i] + '%', x, y + height / 2);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  Chart.defaults.font.family = "'Inter','Noto Sans SC',-apple-system,'Segoe UI',Arial,sans-serif";
+  Chart.defaults.color = '#100F0F';
+
+  const baseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11, weight: '500', family: "'Inter',sans-serif" } } },
+      tooltip: {
+        mode: 'index', intersect: false,
+        backgroundColor: 'rgba(26,29,32,.92)', titleColor: '#FFFCF0', bodyColor: '#FFFCF0',
+        padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4,
+        titleFont: { size: 12, weight: '600', family: "'Inter',sans-serif" },
+        bodyFont: { size: 11, family: "'JetBrains Mono',monospace" }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#575653', font: { size: 10, family: "'Inter',sans-serif" } } },
+      y: { grid: { color: 'rgba(16,15,15,0.04)', lineWidth: 0.8, borderDash: [3,3] }, border: { display: false }, ticks: { color: '#575653', font: { size: 10, family: "'Inter',sans-serif" } } }
+    }
+  };
+
+  // 1. Contract chart
+  const contractLabels = DATA.contract.map(r => r.group);
+  const contractRates = DATA.contract.map(r => r.rate);
+  const contractLo = DATA.contract.map(r => r.ci_lo);
+  const contractHi = DATA.contract.map(r => r.ci_hi);
+  new Chart(document.getElementById('chart-contract'), {
+    type: 'bar',
+    data: {
+      labels: contractLabels,
+      datasets: [{
+        label: 'Churn rate (%)',
+        data: contractRates,
+        backgroundColor: ['#205EA6', '#3B5284', '#24837B'],
+        borderRadius: 6, barPercentage: 0.55,
+        _showLabel: true, _labelBold: true, _labelColor: '#100F0F'
+      }]
+    },
+    options: {
+      ...baseOptions,
+      errorBars: { lo: contractLo, hi: contractHi },
+      plugins: { ...baseOptions.plugins, legend: { display: false } },
+      scales: { ...baseOptions.scales, y: { ...baseOptions.scales.y, beginAtZero: true, max: Math.max(...contractHi) * 1.35 } }
+    },
+    plugins: [topLabelPlugin, {
+      id: 'errBarWrap', afterDatasetsDraw(chart) { errBarPlugin.afterDatasetsDraw(chart, null, chart.options.errorBars); }
+    }]
+  });
+
+  // 2. Tenure churn-rate line (top panel) — small-n points (<30) would be dropped; none here.
+  new Chart(document.getElementById('chart-tenure-rate'), {
+    type: 'line',
+    data: {
+      labels: DATA.tenure.labels,
+      datasets: [{
+        label: 'Churn rate (%)',
+        data: DATA.tenure.churn_rate,
+        borderColor: '#B85B35', backgroundColor: 'rgba(184,91,53,.12)',
+        borderWidth: 2.5, pointBackgroundColor: '#B85B35', pointRadius: 4, tension: 0.25, fill: true,
+        _showLabel: true, _labelColor: '#B85B35', _labelBold: true
+      }]
+    },
+    options: {
+      ...baseOptions,
+      plugins: { ...baseOptions.plugins, legend: { display: false } },
+      scales: {
+        x: { ...baseOptions.scales.x, ticks: { display: false } },
+        y: { ...baseOptions.scales.y, beginAtZero: true, max: Math.max(...DATA.tenure.churn_rate) * 1.35 }
+      }
+    },
+    plugins: [topLabelPlugin]
+  });
+
+  // 2b. Tenure contract-mix 100% stacked bar (bottom panel)
+  const contractColors = { 'Month-to-month': '#205EA6', 'One year': '#3B5284', 'Two year': '#24837B' };
+  new Chart(document.getElementById('chart-tenure-struct'), {
+    type: 'bar',
+    data: {
+      labels: DATA.tenure.labels,
+      datasets: Object.keys(DATA.tenure.structure).map(k => ({
+        label: k, data: DATA.tenure.structure[k], backgroundColor: contractColors[k], stack: 's'
+      }))
+    },
+    options: {
+      ...baseOptions,
+      scales: {
+        x: { ...baseOptions.scales.x, stacked: true },
+        y: { ...baseOptions.scales.y, stacked: true, beginAtZero: true, max: 100, ticks: { ...baseOptions.scales.y.ticks, stepSize: 20 } }
+      }
+    },
+    plugins: [structLabelPlugin]
+  });
+
+  // 3. Driver chart (grouped horizontal-style via vertical grouped bars)
+  const driverLabels = DATA.drivers.map(r => r.feature);
+  new Chart(document.getElementById('chart-drivers'), {
+    type: 'bar',
+    data: {
+      labels: driverLabels,
+      datasets: [
+        { label: 'Without', data: DATA.drivers.map(r => r.rate_without), backgroundColor: '#205EA6', borderRadius: 5, _showLabel: true, _labelColor: '#205EA6', _labelBold: true },
+        { label: 'With', data: DATA.drivers.map(r => r.rate_with), backgroundColor: '#3B5284', borderRadius: 5, _showLabel: true, _labelColor: '#3B5284', _labelBold: true }
+      ]
+    },
+    options: {
+      ...baseOptions,
+      scales: { ...baseOptions.scales, y: { ...baseOptions.scales.y, beginAtZero: true, max: Math.max(...DATA.drivers.map(r => Math.max(r.rate_without, r.rate_with))) * 1.35 } }
+    },
+    plugins: [topLabelPlugin]
+  });
+
+  // 4. Payment method chart
+  const payLabels = DATA.payment.map(r => r.group);
+  const payRates = DATA.payment.map(r => r.rate);
+  const payLo = DATA.payment.map(r => r.ci_lo);
+  const payHi = DATA.payment.map(r => r.ci_hi);
+  new Chart(document.getElementById('chart-payment'), {
+    type: 'bar',
+    data: {
+      labels: payLabels,
+      datasets: [{
+        label: 'Churn rate (%)', data: payRates,
+        backgroundColor: ['#205EA6', '#3B5284', '#24837B', '#52606D'],
+        borderRadius: 6, barPercentage: 0.55,
+        _showLabel: true, _labelBold: true, _labelColor: '#100F0F'
+      }]
+    },
+    options: {
+      ...baseOptions,
+      errorBars: { lo: payLo, hi: payHi },
+      plugins: { ...baseOptions.plugins, legend: { display: false } },
+      scales: { ...baseOptions.scales, y: { ...baseOptions.scales.y, beginAtZero: true, max: Math.max(...payHi) * 1.35 } }
+    },
+    plugins: [topLabelPlugin, {
+      id: 'errBarWrap2', afterDatasetsDraw(chart) { errBarPlugin.afterDatasetsDraw(chart, null, chart.options.errorBars); }
+    }]
+  });
+});
+</script>
+</body>
+</html>

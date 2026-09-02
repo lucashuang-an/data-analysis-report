@@ -1,6 +1,6 @@
 ---
 name: data-analysis-report
-description: "数据分析 HTML 报告生成器：读取 Excel/CSV 文件，结合业务背景和分析目标，自动完成数据质量审计、统计检验（Z 检验/置信区间/效应量/多重比较校正），生成含图表、结论建议、方法说明的完整 HTML 报告并启动本地预览。只要用户提供了表格数据（xlsx/csv）并希望做分析、看趋势、比较分组、评估效果、产出报告或可视化结论，即使没有明确说'报告'二字，也应使用本 skill。"
+description: "数据分析 HTML 报告生成器：读取 Excel/CSV 文件，结合业务背景和分析目标，自动完成数据质量审计、统计检验（Z 检验/置信区间/效应量/多重比较校正），生成含图表、结论建议、方法说明的完整 HTML 报告并启动本地预览。只要用户提供了表格数据（xlsx/csv）并希望做分析、看趋势、比较分组、评估效果、产出报告或可视化结论，即使没有明确说'报告'二字，也应使用本 skill。 | English: An HTML data-analysis report generator. Reads an Excel/CSV file and, given business context and an analysis goal, automatically performs data-quality auditing and statistical testing (Z-tests, confidence intervals, effect sizes, multiple-comparison correction), then produces a complete HTML report with charts, findings, and a methodology note, and launches a local preview. Use this skill whenever the user provides tabular data (xlsx/csv) and wants analysis, trends, group comparisons, impact evaluation, a report, or visualized conclusions — even if they never say the word 'report'."
 metadata:
   version: "3.0.0"
   requires:
@@ -8,7 +8,11 @@ metadata:
     python_packages: ["pandas", "openpyxl"]
 ---
 
-# 数据分析报告生成器
+# 数据分析报告生成器 / Data Analysis Report Generator
+
+> 本 skill 的执行指令主体为中文（开发与测试语言）。功能概览的英文版本见仓库 [README.md](./README.md#english)；生成的**报告本身**语言不受限——见 `examples/` 目录中的英文示例报告。
+>
+> This skill's operating instructions below are written in Chinese (the language it was developed and tested in). For an English overview, see the [English section of the README](./README.md#english). The language of the **generated report** is not constrained by this — see the English example report under `examples/`.
 
 你是一名资深数据分析师。用户提供：
 1. **数据文件**：Excel（.xlsx/.xls）或 CSV
