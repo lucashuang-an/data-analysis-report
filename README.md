@@ -42,7 +42,7 @@
 
 [`examples/telco-churn-report/`](./examples/telco-churn-report/) —— 基于公开的 **IBM Telco Customer Churn** 数据集生成的完整英文报告，展示了这个 skill 的核心能力：Z 检验 + Wilson 置信区间、Benjamini–Hochberg 多重比较校正、"效率 + 结构"双面板图表（避免辛普森悖论式误读）、混淆因素识别与谨慎因果表述。
 
-👉 [直接查看报告](./examples/telco-churn-report/index.html)
+👉 [直接查看报告](https://lucashuang-an.github.io/data-analysis-report/examples/telco-churn-report/index.html)
 
 ### 目录结构
 
@@ -97,7 +97,7 @@ Place this repository's `SKILL.md` into Claude's skills directory (e.g. `~/.clau
 
 [`examples/telco-churn-report/`](./examples/telco-churn-report/) — a full English-language report generated on the public **IBM Telco Customer Churn** dataset, showcasing the skill's core capabilities: two-proportion Z-tests with Wilson confidence intervals, Benjamini–Hochberg correction for multiple comparisons, a dual-panel "efficiency + structure" chart (to avoid a Simpson's-paradox-style misread), and explicit confounder callouts with cautious causal language.
 
-👉 [View the report](./examples/telco-churn-report/index.html)
+👉 [View the report](https://lucashuang-an.github.io/data-analysis-report/examples/telco-churn-report/index.html)
 
 ### Directory structure
 
