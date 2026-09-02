@@ -1,9 +1,10 @@
 # data-analysis-report
 
-[中文](#中文) &nbsp;|&nbsp; [English](#english)
+[中文](#chinese) &nbsp;|&nbsp; [English](#english)
 
 ---
 
+<a id="chinese"></a>
 ## 中文
 
 一个 Claude Skill：读取 Excel/CSV 数据文件，结合业务背景和分析目标，自动完成数据质量审计、统计检验（Z 检验 / 置信区间 / 效应量 / 多重比较校正），并生成一份包含图表、结论建议、方法说明的完整 HTML 分析报告。
@@ -58,6 +59,7 @@ data-analysis-report/
 
 ---
 
+<a id="english"></a>
 ## English
 
 A Claude Skill that reads Excel/CSV files and, combined with business context and an analysis goal, automatically performs data-quality auditing, statistical testing (Z-tests, confidence intervals, effect sizes, multiple-comparison correction), and produces a complete HTML analysis report with charts, findings, and a methodology note.
