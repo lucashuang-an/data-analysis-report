@@ -40,7 +40,7 @@
 
 ### 示例
 
-[`examples/telco-churn-report/`](./examples/telco-churn-report/) —— 基于公开的 **IBM Telco Customer Churn** 数据集生成的完整英文报告，展示了这个 skill 的核心能力：Z 检验 + Wilson 置信区间、Benjamini–Hochberg 多重比较校正、"效率 + 结构"双面板图表（避免辛普森悖论式误读）、混淆因素识别与谨慎因果表述。
+基于公开的 **IBM Telco Customer Churn** 数据集生成的完整英文报告，展示了这个 skill 的核心能力：Z 检验 + Wilson 置信区间、Benjamini–Hochberg 多重比较校正、"效率 + 结构"双面板图表（避免辛普森悖论式误读）、混淆因素识别与谨慎因果表述。
 
 👉 [直接查看报告](https://lucashuang-an.github.io/data-analysis-report/examples/telco-churn-report/index.html)
 
