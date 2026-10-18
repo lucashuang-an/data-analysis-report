@@ -95,7 +95,7 @@ Place this repository's `SKILL.md` into Claude's skills directory (e.g. `~/.clau
 
 ### Example
 
-[`examples/telco-churn-report/`](./examples/telco-churn-report/) — a full English-language report generated on the public **IBM Telco Customer Churn** dataset, showcasing the skill's core capabilities: two-proportion Z-tests with Wilson confidence intervals, Benjamini–Hochberg correction for multiple comparisons, a dual-panel "efficiency + structure" chart (to avoid a Simpson's-paradox-style misread), and explicit confounder callouts with cautious causal language.
+a full English-language report generated on the public **IBM Telco Customer Churn** dataset, showcasing the skill's core capabilities: two-proportion Z-tests with Wilson confidence intervals, Benjamini–Hochberg correction for multiple comparisons, a dual-panel "efficiency + structure" chart (to avoid a Simpson's-paradox-style misread), and explicit confounder callouts with cautious causal language.
 
 👉 [View the report](https://lucashuang-an.github.io/data-analysis-report/examples/telco-churn-report/index.html)
 
