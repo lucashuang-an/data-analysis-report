@@ -2,7 +2,7 @@
 
 An end-to-end demonstration of the `data-analysis-report` skill, run against a public business dataset with an English-language output.
 
-**[→ View the rendered report](./index.html)** (download/open locally, or view via GitHub Pages / `raw.githack.com` if enabled)
+**[→ View the rendered report](https://lucashuang-an.github.io/data-analysis-report/examples/telco-churn-report/index.html)** (hosted on GitHub Pages; source: [`index.html`](./index.html))
 
 ## What this shows
 
