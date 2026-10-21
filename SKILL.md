@@ -1,6 +1,6 @@
 ---
 name: data-analysis-report
-description: "数据分析 HTML 报告生成器：读取 Excel/CSV 文件，结合业务背景和分析目标，自动完成数据质量审计、统计检验（Z 检验/置信区间/效应量/多重比较校正），生成含图表、结论建议、方法说明的完整 HTML 报告并启动本地预览。只要用户提供了表格数据（xlsx/csv）并希望做分析、看趋势、比较分组、评估效果、产出报告或可视化结论，即使没有明确说'报告'二字，也应使用本 skill。 | English: An HTML data-analysis report generator. Reads an Excel/CSV file and, given business context and an analysis goal, automatically performs data-quality auditing and statistical testing (Z-tests, confidence intervals, effect sizes, multiple-comparison correction), then produces a complete HTML report with charts, findings, and a methodology note, and launches a local preview. Use this skill whenever the user provides tabular data (xlsx/csv) and wants analysis, trends, group comparisons, impact evaluation, a report, or visualized conclusions — even if they never say the word 'report'."
+description: "数据分析 HTML 报告生成器：读取 Excel/CSV 文件，结合业务背景和分析目标，自动完成数据质量审计、分组对比（仅 A/B 随机分流实验才做 Z 检验/置信区间/多重比较校正等显著性检验），生成含图表、结论建议、方法说明的完整 HTML 报告并启动本地预览。只要用户提供了表格数据（xlsx/csv）并希望做分析、看趋势、比较分组、评估效果、产出报告或可视化结论，即使没有明确说'报告'二字，也应使用本 skill。 | English: An HTML data-analysis report generator. Reads an Excel/CSV file and, given business context and an analysis goal, automatically performs data-quality auditing and group comparisons (significance testing — Z-tests, confidence intervals, effect sizes, multiple-comparison correction — is applied only to randomized A/B experiments; observational data gets descriptive comparisons only), then produces a complete HTML report with charts, findings, and a methodology note, and launches a local preview. Use this skill whenever the user provides tabular data (xlsx/csv) and wants analysis, trends, group comparisons, impact evaluation, a report, or visualized conclusions — even if they never say the word 'report'."
 metadata:
   version: "3.0.0"
   requires:
@@ -21,7 +21,9 @@ metadata:
 
 产出一份专业 HTML 报告，写入 `$CWD/index.html`，完成后立即启动预览服务。
 
-**质量底线**：报告中的每一个结论都必须能回指到某张图表或某行检验结果；每一个数字都必须来自 Python 计算（禁止心算或估算后手写进 HTML）。
+**质量底线**：报告中的每一个结论都必须能回指到某张图表或某行对比数据；每一个数字都必须来自 Python 计算（禁止心算或估算后手写进 HTML）。
+
+**显著性检验的适用前提（硬规则）**：只有当数据来自 **A/B Test（随机分流实验）** 时才做显著性检验（Z 检验、p 值、显著性徽章、多重比较校正）。分层复盘、渠道对比、用户自选择分组、时间前后对比等**观测数据一律不做显著性检验**，报告中不出现 z / p / `***` / "显著" 等字样，改用描述性对比（见「分组对比规范」）。拿不准数据是否随机分流时，在 Step 0 问用户。
 
 ---
 
@@ -33,6 +35,7 @@ metadata:
 - **缺少分析目标**：问"你最想通过这份数据回答什么问题？"
 - **核心指标口径不明**：转化率/续报率等比率指标，必须确认分子分母定义（如：续报率 = 完成正价课购买人数 / 到课人数？还是 / 报名人数？）
 - **存在疑似主键但有重复**、或多列可作为分组维度时，确认以哪个为准
+- **分组是否来自 A/B 随机分流不明**：决定是否做显著性检验（列名/背景出现"实验组/对照组/分桶/AB"等可直接判定为 A/B；分层、渠道、领取方式等默认视为观测数据）
 
 不要为了流程而提问——能从列名和数据内容合理推断的就直接推断，并在报告的「口径说明」中写明假设。
 
@@ -71,13 +74,14 @@ for c in df.select_dtypes('object').columns:
 
 | 分析目标类型 | 必做分析 |
 |---|---|
-| 分组效果比较（A vs B、各渠道） | 分组指标 + Z 检验 + 效应量 + Wilson CI |
+| A/B 实验（随机分流）效果比较 | 分组指标 + Z 检验 + 效应量 + Wilson CI |
+| 观测分组比较（各渠道/分层/赛事等） | 分组指标 + vs 基准差值(pp) + 相对差异 + 跨维度一致性 + 贡献占比（不做显著性检验） |
 | 趋势判断 | 按周期聚合 + 小样本周期剔除 + 环比变化 |
 | 转化/漏斗 | 各环节转化率 + 最大流失环节定位 |
 | 结构分析 | 占比 + 结构随时间/分组的迁移 |
 | 找驱动因素 | 分维度拆解，定位差异最大的维度 |
 
-计算所有维度的数值，包括统计检验、置信区间、效应量、小样本标记（见下方规范）。**所有结果序列化为一个 JSON 对象**，用 `json.dumps(..., ensure_ascii=False)` 生成后嵌入 HTML 的 `<script>` 块（单一数据源，图表和文字结论都从它取数，避免文数不一致）。
+计算所有维度的数值，包括差值、相对差异、小样本标记（A/B 实验时再加统计检验、置信区间、效应量，见下方规范）。**所有结果序列化为一个 JSON 对象**，用 `json.dumps(..., ensure_ascii=False)` 生成后嵌入 HTML 的 `<script>` 块（单一数据源，图表和文字结论都从它取数，避免文数不一致）。
 
 ### Step 3 — 生成 HTML（Chart.js 4.x CDN）
 
@@ -298,7 +302,7 @@ body {
 2. **核心结论与策略建议**（前置，最重要，见结论写作规范）
 3. **数据说明与口径**（折叠或小字区块：字段口径、清洗决策、样本量、已知局限）
 4. **数据概览 KPI**（4 张卡片）+ 小样本提示
-5. **统计显著性分析**（核心图表 + 检验表格）
+5. **核心分组对比**（核心图表 + 对比表格；仅 A/B 实验时为「统计显著性分析」+ 检验表格）
 6. **其他分析图表**（结构、漏斗、趋势等，顺序按 Step 2 的问题清单）
 7. **渠道 / 分组 / 维度分析**
 
@@ -309,14 +313,14 @@ body {
 「核心结论与策略建议」区块必须遵守：
 
 1. **金字塔结构**：先一句话总答案（直接回应用户的分析目标），再 3–5 条支撑结论，每条附行动建议
-2. **每条结论必须量化**：写"B 桶续报率 12.4%，比基准桶高 3.1pp（p<0.01）"，不写"B 桶明显更好"
+2. **每条结论必须量化**：写"B 渠道续报率 12.4%，比基准高 3.1pp"（A/B 实验可附 p 值），不写"B 渠道明显更好"
 3. **标注证据强度**，用徽章区分三级：
-   - `可信` — 统计显著且样本充足（n ≥ 200 且 p < 0.05）
-   - `方向性` — 差异存在但未达显著或样本偏小，需持续观察
-   - `假设` — 数据只能提示、无法验证的推测，明确写"建议后续用 XX 数据验证"
+   - `可信` — 样本充足（n ≥ 200）、差异幅度有业务意义，且在多个子维度（赛事/渠道/时段等）方向一致；A/B 实验时另需 p < 0.05
+   - `方向性` — 差异存在但样本偏小、幅度小或各子维度方向不一致，需持续观察
+   - `假设` — 数据只能提示、无法验证的推测，明确写"建议后续用 XX 数据验证"（如"建议用 A/B 实验验证"）
 4. **谨慎因果**：观测数据的分组差异描述为"相关/差异"，不写"导致/带来"，除非是随机分流实验。发现可能的混杂因素（如高转化渠道恰好用户结构不同）必须点出
 5. **建议可执行**：每条建议写清"对谁、做什么、预期影响多大"（预期影响可用当前数据估算，如"若 C 渠道转化率提升至均值水平，月增约 N 单"）
-6. 结论条数 ≤ 5，宁缺毋滥；没有显著发现时，"未发现显著差异"本身就是结论，直接说，不要硬编故事
+6. 结论条数 ≤ 5，宁缺毋滥；各组差异很小时，"各组差异不大"本身就是结论，直接说，不要硬编故事
 
 ---
 
@@ -326,7 +330,7 @@ body {
 
 | 问题类型 | 图表 | 备注 |
 |---|---|---|
-| 分组比较 | 柱状图 | 按值降序排列（除非 X 轴有自然顺序）；带误差棒 |
+| 分组比较 | 柱状图 | 按值降序排列（除非 X 轴有自然顺序）；仅 A/B 实验带误差棒 |
 | 时间趋势 | 折线图 | 小样本周期（n<30）断点剔除，不连线硬凑 |
 | 构成占比 | 堆叠柱 / 100% 堆叠柱 | 分类 >6 时合并长尾为"其他"；不用饼图 |
 | 漏斗转化 | 横向条形 | 标注各环节绝对量 + 环节转化率 |
@@ -372,7 +376,7 @@ const topLabelPlugin = {
 };
 ```
 
-**误差棒**（cap 宽度 5px，小样本用陶土中间色 `#B47A4E`，避免硬黄）：
+**误差棒**（仅 A/B 实验使用；cap 宽度 5px，小样本用陶土中间色 `#B47A4E`，避免硬黄）：
 ```js
 const errBarPlugin = {
   id: 'errBar',
@@ -464,9 +468,20 @@ Chart.defaults.color = '#100F0F';  // 油墨黑
 
 ---
 
-## 统计显著性检验规范
+## 分组对比规范（观测数据，默认）
 
-对所有涉及"分组比较"的核心指标，**必须**做双比例 Z 检验，并同时报告效应量：
+非 A/B 实验的分组比较**不做显著性检验**，不计算也不展示 z、p、显著性徽章、BH 校正。用以下描述性信息支撑判断：
+
+- **对比表格列**：分组 | n（分母） | 指标值 | vs 基准差值(pp) | 相对差异 | 小样本标记
+- **基准选择**：有自然对照的取对照（如"直接发货"、"触达 1 次"）；否则取整体或"其余组合计"，并在表头注明
+- **稳健性靠一致性判断**：同一差异在多个子维度（各赛事/渠道/时段）中方向是否一致、幅度是否接近；一致才能作为 `可信` 结论
+- **贡献视角**：除比率外给出各组占总量（用户/参与/产出）的比重，回答"差异有多大的业务分量"
+- **小样本**：n < 200 照常标记（见小样本处理规范），可在提示文字中给出 Wilson 区间说明波动幅度，但不用于判定"显著"
+- 图表不画误差棒，柱顶直接标指标值；tooltip 展示 n
+
+## 统计显著性检验规范（仅限 A/B 随机分流实验）
+
+数据来自 A/B Test 时，对所有涉及"分组比较"的核心指标，**必须**做双比例 Z 检验，并同时报告效应量：
 
 ```python
 import math
@@ -523,7 +538,7 @@ def bh_adjust(pvals):
 
 ## 小样本处理规范
 
-**小样本定义**：n < 200（图表中降低透明度 + 陶土中间色 `#B47A4E` 误差棒，避免硬黄/硬红）；n < 30 的组在趋势折线中直接剔除该点。
+**小样本定义**：n < 200（图表中降低透明度；A/B 实验的误差棒用陶土中间色 `#B47A4E`，避免硬黄/硬红）；n < 30 的组在趋势折线中直接剔除该点。
 
 **必须在以下位置添加提示**：
 
@@ -535,7 +550,7 @@ def bh_adjust(pvals):
 </div>
 ```
 
-2. **统计检验表格**中该行加 `⚠ 小样本` 徽章（陶土色软底）
+2. **对比表格 / 统计检验表格**中该行加 `⚠ 小样本` 徽章（陶土色软底）
 
 3. **随机性说明**（针对小样本异常高值），用具体数字向读者演示波动幅度：
 ```
